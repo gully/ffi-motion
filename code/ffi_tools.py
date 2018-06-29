@@ -2,6 +2,7 @@ import numpy as np
 #import fitsio
 import matplotlib.pyplot as plt
 import sep
+from matplotlib.patches import Rectangle
 
 
 def preprocess_dFFI(raw_data):
@@ -9,7 +10,7 @@ def preprocess_dFFI(raw_data):
 
     Currently performs these pre processing steps:
     - Trims the edges to remove dark rows and collateral rows.
-      TODO: currently hard coded to 50 and 60 pixel edges
+      TODO: currently hard coded to guesstimate of edges
     - Must use numpy C order to comply with sep's C functions
 
     Args:
@@ -19,7 +20,7 @@ def preprocess_dFFI(raw_data):
         trimmed_data (numpy.ndarray): A trimmed version of the input
     """
     raw_data = raw_data.copy(order='C')
-    return raw_data[50:-50, 60:-60]
+    return raw_data[19:-28, 12:-20]
 
 
 
@@ -230,6 +231,34 @@ def get_delta_x_offsets(traces, template_trace):
 
     return np.array(delta_xs)
 
+
+def plot_extractions(data_sub, df_objects):
+    """Plot the detected traces with rectangles on the input image
+    """
+    # plot background-subtracted image
+    fig, ax = plt.subplots()
+    m, s = np.mean(data_sub), np.std(data_sub)
+    im = ax.imshow(data_sub, interpolation='nearest', cmap='gray',
+                   vmin=m-s, vmax=m+s, origin='lower')
+
+    # plot an ellipse for each object
+    for i in range(len(df_objects)):
+        if df_objects.poor_fit[i]:
+            color = 'red'
+        elif df_objects.saturated[i]:
+            color = 'yellow'
+        else:
+            color = 'blue'
+        e = Rectangle(xy=(df_objects.x[i]-80, df_objects.y[i]-18),
+                    width=160,
+                    height=10,
+                    angle=df_objects.theta[i] * 180. / np.pi)
+        e.set_facecolor('none')
+        e.set_edgecolor(color)
+        ax.add_artist(e)
+
+    plt.axis('off')
+    plt.show()
 
 
 def plot_kernel(kernel, aper_mask=None):
